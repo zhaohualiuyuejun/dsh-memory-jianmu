@@ -1,5 +1,15 @@
 # CHANGELOG
 
+## 0.4.5 — 2026-11-15
+
+修复：归档目录 archiveDir 读不到（1.0.2 里「配了也不生效」）：
+- 根因：年轮 `inject` 只有 `tools`，`ctx.settings` 为 undefined，设置行/profile 覆盖全部读不到；
+- 修法：`inject` 加 `settings`（并保留 `ctx.get('settings')` 兜底）；
+- 设置行解析改为「条目 id + 包名」双匹配；只合并设置层明确写过的字段，不再整体回退默认；
+- 新增三层解析：设置行 → describe() 全行扫描 → 直接读 profile patch（兜底）；
+- `status.config` 现在直接显示 `archiveDir`，便于用户自检。
+- 实测：C 盘 `_archive` 3 份 → 归档 3、保留 2、C 盘清零；H 盘出现 2 份。
+
 ## 0.4.4 — 2026-11-15
 
 星图可重建 + 快照不再无限增长：

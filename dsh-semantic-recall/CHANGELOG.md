@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 0.4.7 — 2026-11-15
+
+修复：claimVecArchiveDir 配了不生效（1.0.2 里旧桶只清理、不归档）：
+- 设置行解析改为「条目 id + 包名」双匹配；
+- 新增三层解析：设置行 → describe() 全行扫描 → 直接读 profile patch（兜底）；
+- `session_recall_config` 现在能看到 `claimVecArchiveDir`，用户可自检。
+- 实测：读到 `H:\deepseek\zefeila\jianmu\_backup\claim-vec-snapshots`。
+
 ## 0.4.6 — 2026-11-15
 
 claim 向量缓存桶不再无限增长：

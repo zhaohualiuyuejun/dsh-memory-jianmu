@@ -258,15 +258,52 @@ export function apply(ctx, config) {
    * 读实时配置（顺序）：默认值 < 插件 row 的 config < 插件自己的 config.json < 设置页 user 层。
    * ⚠️ 本机 DSH 0.2.1-rc.5 的 settings.update 不落盘 ⇒ config.json 才是真正生效的那一层。
    */
+  /** 设置行的 ns = 配置条目 id（不是包名）；两种都试，和根藏一致 */
+  const findEntryId = () => {
+    let ce = null
+    try { ce = typeof ctx.get === 'function' ? ctx.get('configEditor', false) : null } catch { ce = null }
+    if (ce && typeof ce.entries === 'function') {
+      try {
+        const rows = ce.entries() || []
+        const hit = rows.find((e) => e?.options?.name === 'dsh-semantic-recall')
+        if (hit?.options?.id) return hit.options.id
+      } catch { /* 读不到条目就退回包名 */ }
+    }
+    return name
+  }
   const liveCfg = () => {
     let out = { ...baseCfg }
     try { out = { ...out, ...normalize(readLocalConfigSync(), out) } } catch { /* 读不到就用上一层 */ }
     try {
       const rows = ctx.settings?.describe?.() || []
-      const row = rows.find((r) => r?.ns === name)
+      const ids = [findEntryId(), name]
+      const row = rows.find((r) => r?.ns && ids.includes(r.ns))
       if (row?.user && typeof row.user === 'object') Object.assign(out, normalize(row.user, out))
     } catch { /* 设置服务不可用就用启动时的值 */ }
+    out.claimVecArchiveDir = claimVecArchiveDirOf(out)
     return out
+  }
+
+  /** 旧向量桶归档目录：设置行 > 全行扫描 > 直接读 profile（防设置行不可寻址） */
+  const readProfileClaimVecArchiveDir = () => {
+    try {
+      const p = ctx.settings?.documentPath
+      if (!p) return ''
+      const text = readFileSync(p, 'utf8')
+      const m = /(?:- id:\s*session-recall|name:\s*dsh-semantic-recall)[\s\S]{0,6000}?claimVecArchiveDir:\s*([^\r\n#]+)/.exec(text)
+      return m ? m[1].trim().replace(/^['"]|['"]$/g, '') : ''
+    } catch { return '' }
+  }
+  const claimVecArchiveDirOf = (cfg) => {
+    const direct = String(cfg?.claimVecArchiveDir || '').trim()
+    if (direct) return direct
+    try {
+      for (const r of ctx.settings?.describe?.() || []) {
+        const v = r?.user?.claimVecArchiveDir || r?.value?.claimVecArchiveDir
+        if (typeof v === 'string' && v.trim()) return v.trim()
+      }
+    } catch { /* 忽略 */ }
+    return readProfileClaimVecArchiveDir()
   }
 
   /** 根藏生效目录：空字符串 = 不用根藏（rootMode=off 或 rootStore 未填） */

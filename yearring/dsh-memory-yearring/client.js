@@ -6,7 +6,7 @@ window.__ModuleLoader__.load({
     const API = '/api/year-ring'
     const STARMAP_API = '/api/jianmu-starmap'
     // UI 显示的插件版本：与 package.json 一致（发布检查会强制核对）
-    const PLUGIN_VERSION = '0.4.4'
+    const PLUGIN_VERSION = '0.4.5'
 
     // ── helpers ────────────────────────────────────────────────────────────
     function qs(params) {

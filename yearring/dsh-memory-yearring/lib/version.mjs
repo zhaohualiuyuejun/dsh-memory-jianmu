@@ -5,7 +5,7 @@
  * 「export」是导出，不是检索，允许。
  */
 
-export const VERSION = '0.4.4'
+export const VERSION = '0.4.5'
 export const SCHEMA_VERSION = 1
 export const CONTRACT_VERSION = 1
 export const ROOT_CONTRACT_VERSION = 1

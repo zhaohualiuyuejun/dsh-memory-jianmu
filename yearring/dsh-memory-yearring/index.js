@@ -13,7 +13,7 @@
  * ============================================================================
  */
 import { join, resolve } from 'node:path'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { loadHostDeps } from './lib/hostdeps.mjs'
 import { defaultDataRoot, isSafePersonaId, PERSONA_UNASSIGNED, yearDir } from './lib/paths.mjs'
@@ -40,7 +40,9 @@ const z = hostDeps.z
 const defineTool = hostDeps.defineTool
 
 export const name = 'memory-yearring'
-export const inject = ['tools']
+// 2026-11-15：必须注入 settings，否则 ctx.settings 为 undefined，
+// liveCfg 读不到设置行，archiveDir 等 profile 覆盖全部失效。
+export const inject = ['tools', 'settings']
 
 export const Config = !z ? undefined : z.object({
   enabled: z.boolean().default(true).extra('volatile', true)
@@ -139,6 +141,35 @@ function normalizeConfig(cfg) {
 }
 
 /**
+ * 只挑「设置层明确写过」的字段（不补默认值）。
+ * liveCfg 用它合并设置行，避免把启动配置整体覆盖成默认。
+ * 2026-11-15 修：archiveDir 是字符串路径，旧逻辑把它当数字丢弃。
+ */
+function pickSettingFields(src) {
+  const out = {}
+  if (!src || typeof src !== 'object') return out
+  for (const k of Object.keys(DEFAULTS)) {
+    const v = src[k]
+    if (v === undefined || v === null || v === '') continue
+    if (k === 'dataRoot') {
+      if (typeof v === 'string') out[k] = v
+    } else if (k === 'autoDigestScope' || k === 'llmProvider' || k === 'llmModel' || k === 'archiveDir') {
+      const str = pickSettingString(v)
+      if (str && str !== '[object Object]') out[k] = str
+    } else if (typeof DEFAULTS[k] === 'boolean') {
+      if (typeof v === 'boolean') out[k] = v
+    } else if (k.startsWith('pricing') || k === 'autoDigestMinute') {
+      const n = Number(v)
+      if (Number.isFinite(n) && (n >= 0 || (k === 'autoDigestMinute' && n === -1))) out[k] = n
+    } else {
+      const n = Number(v)
+      if (Number.isFinite(n) && n > 0) out[k] = Math.floor(n)
+    }
+  }
+  return out
+}
+
+/**
  * 设置层可能把值包成 { value } / { default } / Config 实例（实测 llmProvider 变成 "[object Object]"）。
  * 这里统一解包成字符串；拿不到就返回空串，让调用方回退默认值。
  */
@@ -174,14 +205,60 @@ export function apply(ctx, config) {
     const root = typeof raw === 'string' && raw.trim() ? raw.trim() : defaultDataRoot()
     return resolve(root)
   }
+  /** 设置行的 ns = 配置条目 id（不是包名）；两种都试，和根藏一致 */
+  const findEntryId = () => {
+    let ce = null
+    try { ce = typeof ctx.get === 'function' ? ctx.get('configEditor', false) : null } catch { ce = null }
+    if (ce && typeof ce.entries === 'function') {
+      try {
+        const rows = ce.entries() || []
+        const hit = rows.find((e) => e?.options?.name === 'dsh-memory-yearring')
+        if (hit?.options?.id) return hit.options.id
+      } catch { /* 读不到条目就退回包名 */ }
+    }
+    return name
+  }
+  /** 设置服务：ctx.settings 依赖 inject，另用 ctx.get 兜底（对齐根藏） */
+  const settingsSvc = () => {
+    try { return ctx.settings || (typeof ctx.get === 'function' ? ctx.get('settings', false) : null) || null } catch { return null }
+  }
   const liveCfg = () => {
     let out = { ...baseCfg }
     try {
-      const rows = ctx.settings?.describe?.() || []
-      const row = rows.find((r) => r?.ns === name)
-      if (row?.user && typeof row.user === 'object') out = { ...out, ...normalizeConfig(row.user) }
+      const rows = settingsSvc()?.describe?.() || []
+      const ids = [findEntryId(), name]
+      const row = rows.find((r) => r?.ns && ids.includes(r.ns))
+      if (row?.user && typeof row.user === 'object') out = { ...out, ...pickSettingFields(row.user) }
     } catch { /* 设置服务不可用就用启动时的值 */ }
     return out
+  }
+
+  /**
+   * 归档目录解析（防设置行不可寻址）：
+   *   ① cfg.archiveDir（设置行已读到）
+   *   ② 扫 describe() 所有行的 user/value（bundle 嵌套时 ns 可能对不上）
+   *   ③ 直接读 profile patch 的 memory-yearring 段（最后兜底）
+   */
+  const readProfileArchiveDir = () => {
+    try {
+      const p = settingsSvc()?.documentPath
+      if (!p) return ''
+      const text = readFileSync(p, 'utf8')
+      const m = /(?:- id:\s*memory-yearring|name:\s*dsh-memory-yearring)[\s\S]{0,4000}?archiveDir:\s*([^\r\n#]+)/.exec(text)
+      return m ? m[1].trim().replace(/^['"]|['"]$/g, '') : ''
+    } catch { return '' }
+  }
+  const archiveDirOf = (cfg) => {
+    const direct = String(cfg?.archiveDir || '').trim()
+    if (direct) return direct
+    try {
+      const rows = settingsSvc()?.describe?.() || []
+      for (const r of rows) {
+        const v = r?.user?.archiveDir || r?.value?.archiveDir
+        if (typeof v === 'string' && v.trim()) return v.trim()
+      }
+    } catch { /* 忽略 */ }
+    return readProfileArchiveDir()
   }
 
   /** 宿主的 llm 服务；可能晚于 apply 才就绪，所以每次现取 */
@@ -416,7 +493,7 @@ export function apply(ctx, config) {
       if (off) return off
       const p = await resolvePersona(args, exec)
       if (!p.ok) return p
-      return rebuildTopicDocs({ dataRoot: dataRoot(), personaId: p.personaId, confirm: Boolean(args.confirm), archiveDir: String(cfg?.archiveDir || '') })
+      return rebuildTopicDocs({ dataRoot: dataRoot(), personaId: p.personaId, confirm: Boolean(args.confirm), archiveDir: archiveDirOf(cfg) })
     },
   })
 
@@ -461,7 +538,8 @@ export function apply(ctx, config) {
   const service = {
     context: (workspace = null) => apiContext({ dataRoot: dataRoot(), workspace }),
     status: (personaId, deep = false) => apiStatus({
-      dataRoot: dataRoot(), personaId, deep, config: { ...liveCfg(), budget: budgetOf(liveCfg()) },
+      dataRoot: dataRoot(), personaId, deep,
+      config: { ...liveCfg(), archiveDir: archiveDirOf(liveCfg()), budget: budgetOf(liveCfg()) },
     }),
     topics: (personaId, opts = {}) => apiTopics({ dataRoot: dataRoot(), personaId, ...opts }),
     claims: (personaId, opts = {}) => apiClaims({ dataRoot: dataRoot(), personaId, ...opts }),
@@ -663,7 +741,7 @@ export function apply(ctx, config) {
         if ((r.selection?.remaining ?? 0) <= 0) break
         if (dailyCap > 0 && state.tokens >= dailyCap) { state.stoppedBy = 'DAILY_TOKEN_BUDGET'; break }
       }
-      state.rebuild = await rebuildTopicDocs({ dataRoot: dataRoot(), personaId, confirm: true, archiveDir: String(cfg?.archiveDir || '') })
+      state.rebuild = await rebuildTopicDocs({ dataRoot: dataRoot(), personaId, confirm: true, archiveDir: archiveDirOf(cfg) })
     } catch (e) {
       state.error = e?.code || e?.message || String(e)
     } finally {

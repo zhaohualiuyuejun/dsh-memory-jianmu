@@ -114,6 +114,7 @@ export async function apiStatus({ dataRoot, personaId, config = {}, deep = false
       llmModel: config.llmModel ?? null,
       budget: config.budget ?? null,
       writeEnabled: config.writeEnabled !== false,
+      archiveDir: config.archiveDir ?? '',
     },
     degraded: (manifestRes.ok ? Boolean(manifestRes.manifest.degraded) : true) || claims.corrupt.length > 0 || claims.tornTail,
     warnings: manifestRes.ok ? (manifestRes.manifest.lastError ? [manifestRes.manifest.lastError] : []) : [manifestRes.error],
