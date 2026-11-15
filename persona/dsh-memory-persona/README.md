@@ -1,4 +1,4 @@
-# 镜台 · `dsh-memory-persona` v0.3.7
+# 镜台 · `dsh-memory-persona` v0.3.8
 
 > 建木 · 人格层。**人格卡与「注入设置」的唯一写者**；v2 起可选接管人格/记忆两段注入（`injectEnabled`，**默认关**；打开后接管，与 soul-md 同时开 = 双注入）。
 > 契约：`CONTRACT-v1.md`（本包唯一规格来源）。
@@ -25,7 +25,7 @@
 
 ## 安装
 
-> 本包随《建木》发布件提供（`dsh-memory-persona-0.3.7.tgz`）。推荐用发布件里的 `安装建木.bat` / `install-jianmu.mjs` 一次装五包；也可按下述步骤手工安装。
+> 本包随《建木》发布件提供（`dsh-memory-persona-0.3.8.tgz`）。推荐用发布件里的 `安装建木.bat` / `install-jianmu.mjs` 一次装五包；也可按下述步骤手工安装。
 
 步骤：
 

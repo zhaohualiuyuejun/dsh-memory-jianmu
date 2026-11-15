@@ -5,7 +5,7 @@ window.__ModuleLoader__.load({
     const h = React.createElement
     const API = '/api/persona'
     // UI 显示的插件版本：与 package.json 一致（发布检查会强制核对，别再写 v1a/v2）
-    const PLUGIN_VERSION = '0.3.7'
+    const PLUGIN_VERSION = '0.3.8'
     const CARD_KEY = 'jianmu.persona.cardId'
 
     // ── helpers ────────────────────────────────────────────────────────────
@@ -1331,11 +1331,43 @@ window.__ModuleLoader__.load({
     }
 
     // ── preview tab ────────────────────────────────────────────────────────
-    function PreviewTab({ cardId, rev }) {
+    function OffPreview({ data, onDone }) {
+      const [busy, setBusy] = React.useState(false)
+      const [msg, setMsg] = React.useState(null)
+      const enable = async () => {
+        setBusy(true)
+        setMsg(null)
+        try {
+          const r = await fetch(`${API}/settings`, { cache: 'no-store' })
+          const s = await r.json().catch(() => null)
+          const gen = s?.generation ?? s?.jianmu?.generation ?? null
+          await post('/settings', { patch: { injectEnabled: true }, expectedGeneration: gen, confirm: true })
+          setMsg('已打开接管注入，正在刷新…')
+          if (onDone) onDone()
+        } catch (e) {
+          setMsg(`打开失败：${e?.code ? `[${e.code}] ` : ''}${e?.message || e}`)
+        } finally {
+          setBusy(false)
+        }
+      }
+      return h('div', { className: 'jm-tab-body' },
+        h('div', { className: 'jm-purpose' },
+          h('b', null, '现在没有任何人格/记忆被注入。'),
+          h('span', null, ' 这不是故障，是开关没打开。')),
+        h('div', { className: 'jm-empty', style: { textAlign: 'left' } },
+          h('div', null, data.note || '镜台未接管注入。'),
+          h('div', { className: 'jm-muted', style: { marginTop: '6px' } }, data.hint || '在「注入设置」里打开接管即可。'),
+          h('div', { style: { marginTop: '12px', display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' } },
+            h('button', { className: 'jm-btn', disabled: busy, onClick: enable }, busy ? '打开中…' : '打开接管注入'),
+            msg ? h('span', { className: 'jm-warn-text' }, msg) : null)))
+    }
+
+    function PreviewTab({ cardId, rev, onRefresh }) {
       const api = useApi('/preview', { cardId }, true, rev)
       if (api.loading && !api.data) return h(Loading)
       if (api.error) return h(ErrorBox, { error: api.error })
       const d = api.data || {}
+      if (d.mode === 'off') return h(OffPreview, { data: d, onDone: onRefresh })
       const segs = d.segments || []
       const isJm = d.mode === 'jianmu'
       // 口径：injectMaxChars 只卡「记忆段（core + 主题索引）」；人格段不计入。
@@ -1489,7 +1521,7 @@ window.__ModuleLoader__.load({
         tab === 'bindings' ? h(BindingsTab, { rev, onRefresh: refresh }) : null,
         tab === 'settings' ? h(SettingsTab, { rev, onRefresh: refresh }) : null,
         tab === 'versions' ? h(VersionsTab, { cardId: selected, rev, onRefresh: refresh }) : null,
-        tab === 'preview' ? h(PreviewTab, { cardId: selected, rev }) : null)
+        tab === 'preview' ? h(PreviewTab, { cardId: selected, rev, onRefresh: () => setRev((x) => x + 1) }) : null)
     }
 
     // ── styles ─────────────────────────────────────────────────────────────

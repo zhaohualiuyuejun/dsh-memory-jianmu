@@ -4,7 +4,7 @@
  * 工具面只允许 jianmu_persona_*，且不得含 recall/search/query（检索归寻枝）。
  */
 
-export const VERSION = '0.3.7'
+export const VERSION = '0.3.8'
 export const SCHEMA_VERSION = 1
 export const CONTRACT_VERSION = 1
 export const ROOT_CONTRACT_VERSION = 1

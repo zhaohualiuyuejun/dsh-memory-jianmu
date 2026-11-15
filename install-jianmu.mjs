@@ -31,7 +31,7 @@ const PACKS = [
   { name: 'dsh-memory-store', file: 'dsh-memory-store-0.2.7.tgz' },
   { name: 'dsh-memory-process', file: 'dsh-memory-process-0.2.7.tgz' },
   { name: 'dsh-memory-yearring', file: 'dsh-memory-yearring-0.4.3.tgz' },
-  { name: 'dsh-memory-persona', file: 'dsh-memory-persona-0.3.7.tgz' },
+  { name: 'dsh-memory-persona', file: 'dsh-memory-persona-0.3.8.tgz' },
 ]
 const META = { name: 'jianmu-all', file: 'meta/jianmu-all-0.1.0.tgz' }
 const THREE = ['package.json', 'pnpm-lock.yaml', 'cordis.patch.yml']

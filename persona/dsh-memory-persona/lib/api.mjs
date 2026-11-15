@@ -55,7 +55,11 @@ export async function apiStatus({ dataRoot, ctx = null, deep = false, profile = 
     }
   }
   const soulMd = await resolveSoulMdConfig(ctx, { profile })
-  if (!soulMd.ok) warnings.push(`回退源不可读：${soulMd.error?.message || 'unknown'}`)
+  if (!soulMd.ok) {
+    const takeoverNow = Boolean(config?.injectEnabled)
+    warnings.push(`回退源不可读：${soulMd.error?.message || 'unknown'}`
+      + (takeoverNow ? '（镜台接管下不影响注入）' : '；且镜台未接管 —— 现在没有任何人格/记忆注入，去「注入设置」打开接管即可'))
+  }
   // 漂移检测（只读）：镜台卡是 soul-md 的副本。v2 接管前 soul-md 仍是注入真源，
   // 所以这里只报告「卡正文 vs soul-md 正文」是否逐字一致，不自动同步、不改任何文件。
   const soulMdDrift = []
@@ -306,7 +310,7 @@ export async function apiSettings({ dataRoot, ctx = null, profile = 'desktop', c
     cacheMs: Number(config.injectCacheMs) || 5000,
     note: takeover
       ? '镜台已接管注入（jianmu:persona / jianmu:memory）。'
-      : '镜台未接管（injectEnabled=false）；当前仍由回退源注入。',
+      : '镜台未接管（injectEnabled=false）：若本机有可用的回退源（soul-md）由它注入；没有的话就完全没有注入。',
     // v2：可写口径（写 registry.settings；文件层压过 patch 配置行）
     editable: !(config && config.enabled === false),
     settingsRevision: reg.ok ? reg.revision : null,
@@ -358,7 +362,29 @@ export async function apiPreview({ dataRoot, cardId = null, workspace = null, se
   // 镜台已接管时，soul-md 读不到**不是**预览失败：人格可能来自镜台卡、记忆来自建木根。
   // 只有「镜台没接管」时才必须依赖 soul-md（那时预览就是 soul-md 的口径）。
   if (!soulAvailable && !jianmuConfig?.injectEnabled) {
-    return { ok: false, code: soul.code || 'SOULMD_UNAVAILABLE', error: soul.error, soulAvailable: false }
+    // 这不是故障：镜台没接管、本机也没有 soul-md。给一句人话 + 下一步，不要甩红色错误码。
+    const cap = Number(jianmuConfig?.injectMaxChars) || 12000
+    return {
+      ok: true,
+      previewOnly: true,
+      mode: 'off',
+      takeover: false,
+      soulAvailable: false,
+      canEnableTakeover: true,
+      note: '镜台还没接管注入，本机也没有可用的 soul-md 回退源 —— 所以现在没有任何人格/记忆被注入。',
+      hint: '点下面的「打开接管注入」即可；打开后当场生效，不用重启。也可以去「注入设置」里开。',
+      cardName: null,
+      cardSource: 'none',
+      cardId: null,
+      cardFile: null,
+      fallbackReason: null,
+      resolution: { name: null, cardSource: 'none', reason: '镜台未接管（injectEnabled=false）', key: null },
+      persona: { name: null, text: '', chars: 0, tokensEstimate: 0, source: 'none', file: null, cardId: null },
+      memory: { text: '', chars: 0, tokensEstimate: 0, scope: null, file: null, topics: [], truncated: false, reasons: [], cap },
+      segments: [],
+      totals: { chars: 0, tokensEstimate: 0, injectMaxChars: cap },
+      warnings: [],
+    }
   }
   let config = soulAvailable ? normalizeSoulMdConfig(soul.config) : normalizeSoulMdConfig({} )
   // soul-md 被禁用/async 读取不到 cards 时，回退到同步服务读取（与 buildInjection 同源）

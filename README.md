@@ -3,9 +3,9 @@
 > 给 **DeepSeek Harness** 的五层记忆插件：原话可查、语义检索、去重整理、claim 认知、人格注入。
 > 层间只走一份显式契约；可整层安装，也可单包装。
 
-**建木 1.0.0（首个公开发布）** · 五包版本见下表 · [MIT](LICENSE)
+**建木 1.0.1**（1.0.0 首发后的小修：注入预览不再误报错误）· 五包版本见下表 · [MIT](LICENSE)
 
-> 建木 1.0.0 是**产品版本**；五个包仍按各自 semver（0.x）演进。包内 API 以各包 README 为准。
+> 建木 **1.0.1** 是产品版本；五个包仍按各自 semver（0.x）演进。包内 API 以各包 README 为准。
 
 ---
 
@@ -38,11 +38,11 @@
 ### 推荐：五包 + 一键脚本
 
 > ⚠️ **Release 资产名说明**：GitHub 不接受中文资产名（会被清洗成 `default.bat` 之类），所以 Release 里的文件用 ASCII 名。
-> 对照：`install-jianmu.bat` = 安装建木.bat、`RELEASE-NOTES-1.0.0.md` = 发布说明、`docs-*.md` = 五份中文文档。
-> **最省事**：直接下载 `jianmu-1.0.0-release.zip`，解压后就是带中文名的完整发布目录（`sha256sum -c SHA256SUMS-public` 原样可用）。
+> 对照：`install-jianmu.bat` = 安装建木.bat、`RELEASE-NOTES-1.0.1.md` = 发布说明、`docs-*.md` = 五份中文文档。
+> **最省事**：直接下载 `jianmu-1.0.1-release.zip`，解压后就是带中文名的完整发布目录（`sha256sum -c SHA256SUMS-public` 原样可用）。
 > 详细对照见 Release 里的 `ASSET-MAP.md`。
 
-1. 从 [Releases](https://github.com/zhaohualiuyuejun/dsh-memory-jianmu/releases) 下载 5 个 tarball、`install-jianmu.mjs`、`install-jianmu.bat` 和 `docs-*.md`（或直接下 `jianmu-1.0.0-release.zip` 解压）。
+1. 从 [Releases](https://github.com/zhaohualiuyuejun/dsh-memory-jianmu/releases) 下载 5 个 tarball、`install-jianmu.mjs`、`install-jianmu.bat` 和 `docs-*.md`（或直接下 `jianmu-1.0.1-release.zip` 解压）。
 2. 把 5 个 `dsh-*.tgz` 与 `install-jianmu.mjs` 放在**同一个目录**里，先看计划（不改任何文件）：
    ```bash
    node install-jianmu.mjs --dry-run
@@ -134,14 +134,20 @@
 
 | 层 | 包 | 版本 |
 |---|---|---|
-| 产品 | **建木** | **1.0.0** |
+| 产品 | **建木** | **1.0.1** |
 | 检索 | `dsh-semantic-recall` | 0.4.5 |
 | 存储 | `dsh-memory-store` | 0.2.7 |
 | 处理 | `dsh-memory-process` | 0.2.7 |
 | 认知 | `dsh-memory-yearring` | 0.4.3 |
-| 人格注入 | `dsh-memory-persona` | 0.3.7 |
+| 人格注入 | `dsh-memory-persona` | 0.3.8 |
 
-> 建木 1.0.0 是首个公开发布；五包仍按各自 semver 演进。发布 tag 用 `v1.0.0`，后续 `v1.1.0` 等按产品线计数。
+> 建木 1.0.0 是首个公开发布，1.0.1 修「注入预览误报」；五包仍按各自 semver 演进。发布 tag 用 `v1.0.1`，后续按产品线计数。
+
+### 1.0.1 修了什么
+
+> 1.0.0 里，在「镜台未接管注入 + 本机没有 soul-md 回退源」时，**人格卡 → 注入预览**会显示红色「读取失败 / SOULMD_UNAVAILABLE」。
+> 实际不是故障，只是注入开关没打开。1.0.1 改成正常说明 + 一个**「打开接管注入」按钮**（点一下当场生效，不用重启）。
+> **默认行为不变**：镜台默认不接管注入，想用就在预览页或「注入设置」里打开。
 
 ---
 
@@ -179,4 +185,4 @@
 
 ---
 
-> 建木 1.0.0 · 2026-11-14
+> 建木 1.0.1 · 2026-11-15
