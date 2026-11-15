@@ -28,7 +28,7 @@
 ### 需要
 
 - DeepSeek Harness **≥ 0.2.1-rc.5**（0.2.1-rc.5 与 0.2.2-rc.3 已实测；0.2.2 预发布由 `engines.dsh` 显式覆盖）
-- Node.js **≥ 22**（DSH 自带 node 即可，`安装建木.bat` 会自动找）
+- Node.js **≥ 22**（DSH 自带 node 即可，`install-jianmu.bat`/安装建木.bat 会自动找）
 - **Windows 10/11** 已实测；macOS / Linux **未验证**
 - 检索需要一个 OpenAI 兼容的嵌入服务（云端或本机 Ollama）；年轮抽取走宿主模型；详见[隐私与外部请求](docs/隐私与外部请求.md)
 - 记忆星图的「重建星图」需要带 numpy 的 Python（优先用 DSH 自带 Python，面板会自动探测；没有也不影响其它层）
@@ -37,8 +37,13 @@
 
 ### 推荐：五包 + 一键脚本
 
-1. 从 [Releases](https://github.com/zhaohualiuyuejun/dsh-memory-jianmu/releases) 下载 5 个 tarball、`install-jianmu.mjs`、`安装建木.bat` 和 `docs/`。
-2. 先看计划（不改任何文件）：
+> ⚠️ **Release 资产名说明**：GitHub 不接受中文资产名（会被清洗成 `default.bat` 之类），所以 Release 里的文件用 ASCII 名。
+> 对照：`install-jianmu.bat` = 安装建木.bat、`RELEASE-NOTES-1.0.0.md` = 发布说明、`docs-*.md` = 五份中文文档。
+> **最省事**：直接下载 `jianmu-1.0.0-release.zip`，解压后就是带中文名的完整发布目录（`sha256sum -c SHA256SUMS-public` 原样可用）。
+> 详细对照见 Release 里的 `ASSET-MAP.md`。
+
+1. 从 [Releases](https://github.com/zhaohualiuyuejun/dsh-memory-jianmu/releases) 下载 5 个 tarball、`install-jianmu.mjs`、`install-jianmu.bat` 和 `docs-*.md`（或直接下 `jianmu-1.0.0-release.zip` 解压）。
+2. 把 5 个 `dsh-*.tgz` 与 `install-jianmu.mjs` 放在**同一个目录**里，先看计划（不改任何文件）：
    ```bash
    node install-jianmu.mjs --dry-run
    ```
@@ -46,7 +51,7 @@
    ```bash
    node install-jianmu.mjs
    ```
-   或双击 `安装建木.bat`。
+   或双击 `install-jianmu.bat`（= 安装建木.bat）。
 4. **重启 DSH**（关掉窗口再打开）。
 
 脚本会：备份 profile 三文件 → 装包 → 写 `dsh.profile.bundles` → 核验；任一步失败自动还原。它**不碰数据**，也不删任何东西。
