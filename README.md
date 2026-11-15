@@ -3,9 +3,9 @@
 > 给 **DeepSeek Harness** 的五层记忆插件：原话可查、语义检索、去重整理、claim 认知、人格注入。
 > 层间只走一份显式契约；可整层安装，也可单包装。
 
-**建木 1.0.1**（1.0.0 首发后的小修：注入预览不再误报错误）· 五包版本见下表 · [MIT](LICENSE)
+**建木 1.0.2**（1.0.1 修注入预览误报；1.0.2 修「重建星图」必失败 + 备份/回退快照无限增长）· 五包版本见下表 · [MIT](LICENSE)
 
-> 建木 **1.0.1** 是产品版本；五个包仍按各自 semver（0.x）演进。包内 API 以各包 README 为准。
+> 建木 **1.0.2** 是产品版本；五个包仍按各自 semver（0.x）演进。包内 API 以各包 README 为准。
 
 ---
 
@@ -38,11 +38,11 @@
 ### 推荐：五包 + 一键脚本
 
 > ⚠️ **Release 资产名说明**：GitHub 不接受中文资产名（会被清洗成 `default.bat` 之类），所以 Release 里的文件用 ASCII 名。
-> 对照：`install-jianmu.bat` = 安装建木.bat、`RELEASE-NOTES-1.0.1.md` = 发布说明、`docs-*.md` = 五份中文文档。
-> **最省事**：直接下载 `jianmu-1.0.1-release.zip`，解压后就是带中文名的完整发布目录（`sha256sum -c SHA256SUMS-public` 原样可用）。
+> 对照：`install-jianmu.bat` = 安装建木.bat、`RELEASE-NOTES-1.0.2.md` = 发布说明、`docs-*.md` = 五份中文文档。
+> **最省事**：直接下载 `jianmu-1.0.2-release.zip`，解压后就是带中文名的完整发布目录（`sha256sum -c SHA256SUMS-public` 原样可用）。
 > 详细对照见 Release 里的 `ASSET-MAP.md`。
 
-1. 从 [Releases](https://github.com/zhaohualiuyuejun/dsh-memory-jianmu/releases) 下载 5 个 tarball、`install-jianmu.mjs`、`install-jianmu.bat` 和 `docs-*.md`（或直接下 `jianmu-1.0.1-release.zip` 解压）。
+1. 从 [Releases](https://github.com/zhaohualiuyuejun/dsh-memory-jianmu/releases) 下载 5 个 tarball、`install-jianmu.mjs`、`install-jianmu.bat` 和 `docs-*.md`（或直接下 `jianmu-1.0.2-release.zip` 解压）。
 2. 把 5 个 `dsh-*.tgz` 与 `install-jianmu.mjs` 放在**同一个目录**里，先看计划（不改任何文件）：
    ```bash
    node install-jianmu.mjs --dry-run
@@ -134,14 +134,20 @@
 
 | 层 | 包 | 版本 |
 |---|---|---|
-| 产品 | **建木** | **1.0.1** |
+| 产品 | **建木** | **1.0.2** |
 | 检索 | `dsh-semantic-recall` | 0.4.6 |
 | 存储 | `dsh-memory-store` | 0.2.8 |
 | 处理 | `dsh-memory-process` | 0.2.7 |
 | 认知 | `dsh-memory-yearring` | 0.4.4 |
 | 人格注入 | `dsh-memory-persona` | 0.3.8 |
 
-> 建木 1.0.0 是首个公开发布，1.0.1 修「注入预览误报」；五包仍按各自 semver 演进。发布 tag 用 `v1.0.1`，后续按产品线计数。
+> 建木 1.0.0 是首个公开发布，1.0.1 修「注入预览误报」，1.0.2 修「重建星图必失败」与快照无限增长；五包仍按各自 semver 演进。发布 tag 用 `v1.0.2`，后续按产品线计数。
+
+### 1.0.2 修了什么
+
+> - **「重建星图」必失败**：年轮构建脚本默认人格是测试夹具 `alice/bob`，真实用户一点就报 `FileNotFoundError`。1.0.2 改为自动发现人格，面板按钮显式传 personas。
+> - **备份/回退快照无限增长**：根藏 A2 快照、年轮 topic_docs 快照、寻枝 claim 向量旧桶此前只建不删。1.0.2 默认只保留最近 2 份，并支持 `archiveDir` / `claimVecArchiveDir` 归档到别的盘。
+> - 本机实测：C 盘可用 **58GB → 64GB（+6.0GB）**。
 
 ### 1.0.1 修了什么
 
@@ -185,4 +191,4 @@
 
 ---
 
-> 建木 1.0.1 · 2026-11-15
+> 建木 1.0.2 · 2026-11-15
