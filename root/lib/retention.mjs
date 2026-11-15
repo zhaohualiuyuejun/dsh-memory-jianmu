@@ -1,15 +1,18 @@
 /**
- * lib/retention.mjs —— _archive 保留策略（Stage 0）
+ * lib/retention.mjs —— 备份保留策略（Stage 0）
  *
  * 规则：
  *   · 每次新建备份后，只保留最近 keep 份（默认 2）；
- *   · 超出的旧目录**移动**到 <dataRoot>/_backup/archive/<personaId>/，不物理删除；
- *   · 移动用 rename（同一 dataRoot 内 = 同卷，原子且快），失败只报告不动手；
- *   · 清理 _backup 必须由人确认后再做（本模块不提供删除入口）。
+ *   · 配了归档目录（archiveDir / JIANMU_ARCHIVE_DIR）→ 超出的旧目录**移动**到
+ *     <archiveDir>/_archive-archive/<personaId>/，C 盘只留在用的数据；
+ *   · 未配归档目录 → 超出的旧目录**直接清理**（备份是可重建的写前快照，
+ *     不清理会让 C 盘随时间无限增长）；
+ *   · 移动优先 rename（同卷原子）；跨盘 EXDEV 时退化为「复制 + 删除」。
  */
-import { readdir, stat, mkdir, rename, access } from 'node:fs/promises'
+import { readdir, stat, mkdir, rename, access, cp, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { archiveDir } from './paths.mjs'
+import { getArchiveRoot } from './archive.mjs'
 
 async function dirBytes(dir) {
   let total = 0
@@ -36,14 +39,24 @@ async function uniqueDest(dest) {
   try { await access(dest); let n = 1; while (true) { const cand = `${dest}-${n}`; try { await access(cand) } catch { return cand } ; n++ } } catch { return dest }
 }
 
+async function moveDir(src, dest) {
+  try { await rename(src, dest) } catch (e) {
+    if (e?.code !== 'EXDEV') throw e
+    await cp(src, dest, { recursive: true, force: false, errorOnExist: true })
+    await rm(src, { recursive: true, force: true })
+  }
+}
+
 /**
- * @returns {Promise<{ok:true, keep:number, total:number, moved:Array<{name:string,bytes:number,files:number,to:string}>, backupRoot:string, errors:string[]}>}
+ * @returns {Promise<{ok:true, keep:number, total:number, moved:Array, deleted:Array, backupRoot:string, errors:string[]}>}
  */
 export async function pruneArchives(dataRoot, personaId, { keep = 2 } = {}) {
   const keepN = Math.max(1, Math.min(20, Number(keep) || 2))
-  const dir = archiveDir(dataRoot, personaId)
-  const backupRoot = join(dataRoot, '_backup', 'archive', personaId)
-  const out = { ok: true, keep: keepN, total: 0, moved: [], backupRoot, errors: [] }
+  const ar = getArchiveRoot()
+  // 配了归档 → 备份直接写在 <archiveDir>/_archive/<pid>，保留策略也扫这里
+  const dir = ar ? join(ar, '_archive', personaId) : archiveDir(dataRoot, personaId)
+  const backupRoot = ar ? join(ar, '_archive-archive', personaId) : ''
+  const out = { ok: true, keep: keepN, total: 0, moved: [], deleted: [], backupRoot, errors: [] }
 
   let ents = []
   try { ents = await readdir(dir, { withFileTypes: true }) } catch { return out }
@@ -62,11 +75,16 @@ export async function pruneArchives(dataRoot, personaId, { keep = 2 } = {}) {
   const old = rows.slice(keepN)
   for (const r of old) {
     try {
-      await mkdir(backupRoot, { recursive: true })
-      const dest = await uniqueDest(join(backupRoot, r.name))
       const size = await dirBytes(r.dir)
-      await rename(r.dir, dest)
-      out.moved.push({ name: r.name, bytes: size.bytes, files: size.files, to: dest })
+      if (backupRoot) {
+        await mkdir(backupRoot, { recursive: true })
+        const dest = await uniqueDest(join(backupRoot, r.name))
+        await moveDir(r.dir, dest)
+        out.moved.push({ name: r.name, bytes: size.bytes, files: size.files, to: dest })
+      } else {
+        await rm(r.dir, { recursive: true, force: true })
+        out.deleted.push({ name: r.name, bytes: size.bytes, files: size.files })
+      }
     } catch (e) {
       out.errors.push(`${r.name}: ${e?.code || e?.message || e}`)
     }

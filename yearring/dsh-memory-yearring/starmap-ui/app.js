@@ -2067,8 +2067,8 @@ async function boot() {
     try {
       const st = await fetch(`${STARMAP_API}/status`, { cache: 'no-store' }).then((r) => r.json())
       const list = st.personas || []
-      // 默认打开Alice（用户主视角）；没有就退到列表第一个
-      if (!pid && list.length) pid = (list.find((x) => x.id === 'alice') || list[0]).id
+      // 默认打开列表第一个人格；alice 只是测试夹具，真实用户没有这个名字
+      if (!pid && list.length) pid = list[0].id
     } catch { /* ignore */ }
   }
   // 后台重建可能正在重写 stats/meta/bin：先探一次，别把半成品当故障
@@ -2080,9 +2080,15 @@ async function boot() {
       if (bootBuilding) setBuildUi(true, `重建中… ${Math.round((Number(bs.elapsedMs) || 0) / 1000)}s`)
     } catch { /* 老版本没有 build-status 端点就忽略 */ }
   }
+  if (!pid) {
+    const ee = $('#err')
+    if (ee) { ee.style.display = 'block'; ee.textContent = '还没有星图数据：先到「年轮」页生成一次，或点侧栏「星图」里的「重建星图」。' }
+    const sb = $('#subtitle'); if (sb) sb.textContent = '暂无数据'
+    return
+  }
   let loaded = false
   try {
-    await loadPersona(pid || 'alice')
+    await loadPersona(pid)
     loaded = true
   } catch (e) {
     if (!bootBuilding) throw e
@@ -2091,7 +2097,7 @@ async function boot() {
     if (!loaded) {
       setBuildUi(true, '构建中，完成后自动加载…')
       await waitBuildDone()
-      await loadPersona(pid || 'alice')
+      await loadPersona(pid)
       setBuildUi(false, '已完成')
     } else {
       setBuildUi(true, '构建进行中，完成后自动刷新…')

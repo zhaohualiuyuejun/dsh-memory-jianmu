@@ -1,7 +1,7 @@
 # 根藏 · dsh-memory-store
 
 > 建木记忆层的**存储层**：把「谁、在什么时候、说了什么」原话摄取、落盘、可重建。
-> 不检索、不注入、不判断谁取代谁。版本 `0.2.7` · 契约 `contractVersion = 1`。
+> 不检索、不注入、不判断谁取代谁。版本 `0.2.8` · 契约 `contractVersion = 1`。
 
 ## UI：侧边栏「根藏」（0.2.6 起）
 
@@ -9,7 +9,7 @@
 
 - **状态卡**：数据目录、总块数、未归属块、磁盘余量、上次/下次自动摄取、嵌入服务是否已配置；
 - **人格 scope 表**：块数、向量缺失与坏行、会话/工作区数、时间范围、降级标记；
-- **设置**：`autoIngest` 开关、`embeddingApiBase`、`embeddingApiKey`（只写不读）、**测试连接**；
+- **设置**：`autoIngest` 开关、`embeddingApiBase`、`embeddingApiKey`（只写不读）、**归档目录 `archiveDir`**、**测试连接**；
 - 数字口径与工具 `jianmu_store_status` 完全一致（UI 与工具调用同一个 `statusAll`）。
 
 HTTP 面（同源、只读为主）：`GET /api/memory-store/status`、`GET /api/memory-store/settings`、
@@ -161,6 +161,7 @@ node tools/verify-morning.mjs    # 上午四条收工判据（含旧库零改动
 - `identity.json` 的 `workspaces` 键 v1 沿用旧库 `wsPretty`（见契约 §3.3）。
 - A2 自动摘要只做**增量**；首次全量 / 换嵌入模型仍需手动跑 `tools/summarize-reembed.mjs`。
 - 每次增量更新会重写整个向量文件（单个大库约 129MB）；实测小时级可接受，分块追加留待后续优化。
+- A2 写前快照在 `<scope>/.backup/a2-<ts>/`，**只保留最近 2 份**（`JIANMU_A2_BACKUP_KEEP` 可调）；成功写盘后更旧的快照会被清理，否则小时级重嵌会把 C 盘吃出数 GB。
 
 ## 硬认领（0.2.5 起 · P4 #10）
 

@@ -33,7 +33,7 @@
 - 检索需要一个 OpenAI 兼容的嵌入服务（云端或本机 Ollama）；年轮抽取走宿主模型；详见[隐私与外部请求](docs/隐私与外部请求.md)
 - 记忆星图的「重建星图」需要带 numpy 的 Python（优先用 DSH 自带 Python，面板会自动探测；没有也不影响其它层）
 
-> ⚠️ **不要用插件管理器 / npm 去装 `dsh-semantic-recall`**：npm 上同名包的 latest 停在 **0.3.0**（旧版），与这里发布的 **0.4.5** 不是同一份，混着装会得到不匹配的一套。请一律用本页 Releases 里的 tarball + 安装脚本。
+> ⚠️ **不要用插件管理器 / npm 去装 `dsh-semantic-recall`**：npm 上同名包的 latest 停在 **0.3.0**（旧版），与这里发布的 **0.4.6** 不是同一份，混着装会得到不匹配的一套。请一律用本页 Releases 里的 tarball + 安装脚本。
 
 ### 推荐：五包 + 一键脚本
 
@@ -135,10 +135,10 @@
 | 层 | 包 | 版本 |
 |---|---|---|
 | 产品 | **建木** | **1.0.1** |
-| 检索 | `dsh-semantic-recall` | 0.4.5 |
-| 存储 | `dsh-memory-store` | 0.2.7 |
+| 检索 | `dsh-semantic-recall` | 0.4.6 |
+| 存储 | `dsh-memory-store` | 0.2.8 |
 | 处理 | `dsh-memory-process` | 0.2.7 |
-| 认知 | `dsh-memory-yearring` | 0.4.3 |
+| 认知 | `dsh-memory-yearring` | 0.4.4 |
 | 人格注入 | `dsh-memory-persona` | 0.3.8 |
 
 > 建木 1.0.0 是首个公开发布，1.0.1 修「注入预览误报」；五包仍按各自 semver 演进。发布 tag 用 `v1.0.1`，后续按产品线计数。

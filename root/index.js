@@ -16,6 +16,7 @@ import { resolve } from 'node:path'
 import { loadHostDeps } from './lib/hostdeps.mjs'
 import { loadIdentity } from './lib/identity.mjs'
 import { defaultDataRoot, PERSONA_UNASSIGNED } from './lib/paths.mjs'
+import { setArchiveRoot } from './lib/archive.mjs'
 import { checkToolName, checkToolSurface, ALLOWED_TOOLS } from './lib/guards.mjs'
 import { openStore, statusAll, statusOfScope, exportChunks, rebuildIndexMeta, verifyScope } from './lib/store.mjs'
 import { migrateLegacyIndex, readLegacyIndex } from './lib/migrate.mjs'
@@ -41,6 +42,8 @@ export const Config = !z ? undefined : z.object({
     .description('总开关：关掉后四个工具只回一句「已关闭」'),
   dataRoot: z.string().default('').extra('volatile', true)
     .description('数据根目录；留空 = <DSH_HOME>/memory-jianmu（数据与插件代码分离）'),
+  archiveDir: z.string().default('').extra('volatile', true)
+    .description('归档目录（建议放别的盘）：备份/回退快照移到这里，C 盘只留正在用的数据；留空 = 只保留最近 2 份并自动清理更旧的'),
   ingestEnabled: z.boolean().default(false).extra('volatile', true)
     .description('会话增量摄取总闸（默认关；按施工计划晚间接通后才开）'),
   ingestDays: z.natural().default(7).extra('volatile', true)
@@ -72,6 +75,7 @@ export const Config = !z ? undefined : z.object({
 const DEFAULTS = Object.freeze({
   enabled: true,
   dataRoot: '',
+  archiveDir: '',
   ingestEnabled: false,
   ingestDays: 7,
   retentionDays: 30,
@@ -219,6 +223,8 @@ export function apply(ctx, config) {
       const sr = settingsRow()
       if (sr?.row?.user && typeof sr.row.user === 'object') Object.assign(out, pickConfigFields(sr.row.user))
     } catch { /* 设置服务不可用就用启动时的值 */ }
+    // 归档目录随配置热更新：备份/回退快照据此决定留 C 盘还是别的盘
+    setArchiveRoot(out.archiveDir)
     return out
   }
 

@@ -81,6 +81,29 @@ def build(p):
     print(f"{p}: {n} 点 / {k} 刀 → {binp} ({os.path.getsize(binp)/1048576:.1f}MB)")
 
 
+def discover_personas():
+    """默认 = OUT 里已有 stats-<p>.json 的人格（只布局 build-starmap.py 真产出过的人）。
+    不再回退到 alice/bob 测试夹具。"""
+    try:
+        names = os.listdir(OUT)
+    except OSError:
+        return []
+    return sorted(f[len("stats-"):-len(".json")] for f in names
+                  if f.startswith("stats-") and f.endswith(".json") and len(f) > len("stats-.json"))
+
 if __name__ == "__main__":
-    for p in (sys.argv[1:] or ["alice", "bob"]):
+    personas = sys.argv[1:] or discover_personas()
+    if not personas:
+        print(f"[starmap] 没有可布局的人格：{OUT} 下没有 stats-*.json", file=sys.stderr)
+        sys.exit(1)
+    built = 0
+    for p in personas:
+        stats = os.path.join(OUT, f"stats-{p}.json")
+        binp = os.path.join(OUT, f"starmap-{p}.bin")
+        if not (os.path.isfile(stats) and os.path.isfile(binp)):
+            print(f"[starmap] 跳过 {p}：缺 {stats} 或 {binp}", file=sys.stderr)
+            continue
         build(p)
+        built += 1
+    if built == 0:
+        sys.exit(1)

@@ -10,7 +10,7 @@
  *
  * v1a 说明：熏习 topics=0 时没有 topicId，用 topicHint 归一化分组（hint-<hash>）。
  */
-import { rename, readdir, copyFile } from 'node:fs/promises'
+import { rename, readdir, copyFile, stat, rm, cp } from 'node:fs/promises'
 import { join } from 'node:path'
 import { topicDocsDir, archiveDir, assertYearWrite, tsSlugMs, yearDir } from './paths.mjs'
 import { ensureDir, atomicWrite } from './fsatomic.mjs'
@@ -211,10 +211,68 @@ export function groupClaims(claimsIndex, personaId = null, overrides = null) {
 }
 
 /**
+ * 收尾快照：rebuild 每次都会整份镜像 topic_docs 到 _archive/<ts>/；
+ * 不限制的话每小时一份、每份上千个 md → 本机曾累积 165 份 / 1018MB / 17 万文件。
+ *
+ * 规则：只认「时间戳命名」的快照（hard-claim-* / lock-stale-* 等不动）。
+ *   · 配了归档目录（archiveRoot）→ 全部搬到 <archiveRoot>/year/<pid>/_archive/，归档盘上保留最近 keep 份；
+ *   · 没配 → C 盘只保留最近 keep 份，更旧的清理。
+ */
+const SNAP_DIR_RE = /^\d{8}-\d{6}-\d{1,3}-[a-z0-9]{4,}$/
+
+async function moveDir(src, dest) {
+  try { await rename(src, dest) } catch (e) {
+    if (e?.code !== 'EXDEV') throw e
+    await cp(src, dest, { recursive: true, force: false, errorOnExist: true })
+    await rm(src, { recursive: true, force: true })
+  }
+}
+
+async function listSnapshots(baseDir) {
+  let ents = []
+  try { ents = await readdir(baseDir, { withFileTypes: true }) } catch { return [] }
+  const rows = []
+  for (const d of ents) {
+    if (!d.isDirectory() || !SNAP_DIR_RE.test(d.name)) continue
+    const p = join(baseDir, d.name)
+    const s = await stat(p).catch(() => null)
+    rows.push({ name: d.name, dir: p, mtimeMs: s?.mtimeMs ?? 0 })
+  }
+  rows.sort((a, b) => (b.mtimeMs - a.mtimeMs) || b.name.localeCompare(a.name))
+  return rows
+}
+
+export async function settleTopicSnapshots({ dataRoot, personaId, archiveRoot = '', keep = 2 }) {
+  const keepN = Math.max(1, Math.min(20, Number(keep) || 2))
+  const rows = await listSnapshots(archiveDir(dataRoot, personaId))
+  const out = { ok: true, keep: keepN, total: rows.length, archived: 0, deleted: 0, errors: [] }
+  if (!rows.length) return out
+  if (archiveRoot) {
+    const dstBase = join(archiveRoot, 'year', personaId, '_archive')
+    await ensureDir(dstBase)
+    for (const r of rows) {
+      try { await moveDir(r.dir, join(dstBase, r.name)); out.archived++ } catch (e) {
+        out.errors.push(`${r.name}: ${e?.code || e?.message || e}`)
+      }
+    }
+    // 归档盘上同样只留最近 keep 份（每小时一份，全留会无限涨）
+    const arows = await listSnapshots(dstBase)
+    for (const r of arows.slice(keepN)) {
+      try { await rm(r.dir, { recursive: true, force: true }); out.deleted++ } catch { /* 单份失败不阻塞 */ }
+    }
+  } else {
+    for (const r of rows.slice(keepN)) {
+      try { await rm(r.dir, { recursive: true, force: true }); out.deleted++ } catch { /* 单份失败不阻塞 */ }
+    }
+  }
+  return out
+}
+
+/**
  * rebuild：从 claims 全量重建 topic_docs（0 LLM）。
  * 旧 topic_docs 先整体快照进 _archive/<ts>/topic_docs-mirror/，再重写。
  */
-export async function rebuildTopicDocs({ dataRoot, personaId, confirm = false }) {
+export async function rebuildTopicDocs({ dataRoot, personaId, confirm = false, archiveDir: archiveRoot = '', snapshotKeep = 2 }) {
   if (confirm !== true) {
     return {
       ok: false,
@@ -307,6 +365,10 @@ export async function rebuildTopicDocs({ dataRoot, personaId, confirm = false })
     await writeManifest(dataRoot, personaId, m)
   }
 
+  // 快照收尾：归档或清理旧快照，保证 _archive 不会每小时涨一份
+  const snapshotCleanup = await settleTopicSnapshots({ dataRoot, personaId, archiveRoot, keep: snapshotKeep })
+    .catch((e) => ({ ok: false, error: String(e?.message || e) }))
+
   return {
     ok: true,
     personaId,
@@ -316,6 +378,7 @@ export async function rebuildTopicDocs({ dataRoot, personaId, confirm = false })
     movedOut: moved,
     mirroredOld: mirrored,
     snapshot: mirrored || moved.length ? snapDir : null,
+    snapshotCleanup,
     snapshotError,
     claims: { total: counts.claims, active: counts.active, conflicted: counts.conflicted },
     note: written.length === 0 ? '没有 claim，topic_docs 保持空（不生成空正文）' : '0 LLM 重建完成；可重复执行',

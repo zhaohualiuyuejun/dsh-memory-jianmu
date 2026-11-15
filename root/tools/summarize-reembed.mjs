@@ -37,6 +37,7 @@ const LIMIT = Number(argOf('--limit', 0)) || 0
 const SUMMARIES = argOf('--summaries', '') ? path.resolve(argOf('--summaries', '')) : ''
 const APIKEY_FILE = argOf('--api-key-file', process.env.SILICONFLOW_ENV_FILE || '')
 const DRY = has('--dry-run')
+const ARCHIVE = String(process.env.JIANMU_ARCHIVE_DIR || '').trim()
 const BATCH = 16
 
 // 由 lib/auto-summary.mjs 挂载的子进程会带这两个环境变量：
@@ -113,6 +114,27 @@ const scopes = fs.readdirSync(path.join(ROOT, 'scopes'), { withFileTypes: true }
 const targets = SCOPE === 'all' ? scopes : scopes.filter((s) => s === SCOPE)
 if (!targets.length) { console.error(`❌ 找不到 scope：${SCOPE}（有：${scopes.join(',')}）`); process.exit(4) }
 
+// 旧快照保留：A2 可能每小时跑一次，每份都含整个 vectors 文件（百 MB 级）；
+// 只保留最近 N 份（默认 2）。更旧的是写前快照，成功写盘后只用于立即回滚。
+// 2026-11-15 实测：本机旧快照曾累积到 4.5GB（39 份），是 C 盘被吃满的主因。
+const KEEP_BACKUPS = Math.max(1, Number(process.env.JIANMU_A2_BACKUP_KEEP) || 2)
+function pruneBackups(bdir) {
+  let names = []
+  try {
+    names = fs.readdirSync(bdir, { withFileTypes: true })
+      .filter((d) => d.isDirectory() && d.name.startsWith('a2-'))
+      .map((d) => d.name)
+      .sort()
+  } catch { return 0 }
+  const old = names.slice(0, Math.max(0, names.length - KEEP_BACKUPS))
+  let n = 0
+  for (const name of old) {
+    try { fs.rmSync(path.join(bdir, name), { recursive: true, force: true }); n++ } catch { /* 单份失败不阻塞主流程 */ }
+  }
+  if (n) console.log(`   清理旧快照 ${n} 份（保留最近 ${KEEP_BACKUPS} 份；JIANMU_A2_BACKUP_KEEP 可调）`)
+  return n
+}
+
 for (const pid of targets) {
   const dir = path.join(ROOT, 'scopes', pid)
   const chunksFile = path.join(dir, 'chunks.jsonl')
@@ -159,7 +181,10 @@ for (const pid of targets) {
 
   // ③ 备份 + 记录「读取时的行签名」（防止转换期间被自动摄取插队）
   const ts = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14)
-  const bak = path.join(dir, '.backup', `a2-${ts}`)
+  // 配了归档目录 → 快照直接写别的盘（C 盘只留正在用的 vectors）
+  const bak = ARCHIVE
+    ? path.join(ARCHIVE, 'a2', pid, `a2-${ts}`)
+    : path.join(dir, '.backup', `a2-${ts}`)
   fs.mkdirSync(bak, { recursive: true })
   fs.copyFileSync(chunksFile, path.join(bak, 'chunks.jsonl'))
   if (fs.existsSync(vecFile)) fs.copyFileSync(vecFile, path.join(bak, 'vectors_v1.f32'))
@@ -208,6 +233,7 @@ for (const pid of targets) {
   const tmpMan = `${manFile}.tmp`
   fs.writeFileSync(tmpMan, JSON.stringify(man, null, 2))
   fs.renameSync(tmpMan, manFile)
+  pruneBackups(ARCHIVE ? path.join(ARCHIVE, 'a2', pid) : path.join(dir, '.backup'))
   console.log(`   ✅ ${pid} 完成：摘要 ${rows.filter((r) => r.summary).length}/${rows.length}`)
 }
 console.log('\n完成。')

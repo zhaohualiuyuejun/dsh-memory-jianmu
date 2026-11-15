@@ -548,7 +548,7 @@ await t('显式忘记：预览不写；confirm 写墓碑+快照；revive 恢复�
   assert.equal(n.code, 'CONFIRM_REQUIRED')
 })
 
-await t('归档保留：只留最近 2 份，旧的移到 _backup（不物理删）', async () => {
+await t('归档保留：只留最近 2 份；未配归档则清理旧的（防无限增长）', async () => {
   const d = await freshDir('retention')
   await writeScopeBundle({ dataRoot: d, personaId: 'alice', utterances: [utt()], vectors: vec(8, 1), embedding: { dim: 8 } })
   const target = join(d, 'scopes', 'alice', 'chunks.jsonl')
@@ -560,8 +560,31 @@ await t('归档保留：只留最近 2 份，旧的移到 _backup（不物理删
   const kept = await listDirs(join(d, 'scopes', 'alice', '_archive'))
   const moved = await listDirs(join(d, '_backup', 'archive', 'alice'))
   assert.equal(kept.length, 2, `_archive 应留 2 份，实际 ${kept.length}`)
-  assert.equal(moved.length, 2, `_backup 应收到 2 份，实际 ${moved.length}`)
+  assert.equal(moved.length, 0, `未配归档时不应再搬 _backup，实际 ${moved.length}`)
   assert.ok((await readdir(join(d, 'scopes', 'alice', '_archive', kept[0]))).includes('chunks.jsonl'))
+})
+
+await t('归档保留：配 archiveDir 时备份落归档盘、旧份移 cold 目录', async () => {
+  const d = await freshDir('retention-archive')
+  await writeScopeBundle({ dataRoot: d, personaId: 'alice', utterances: [utt()], vectors: vec(8, 1), embedding: { dim: 8 } })
+  const target = join(d, 'scopes', 'alice', 'chunks.jsonl')
+  const ar = join(d, 'elsewhere-archive')
+  process.env.JIANMU_ARCHIVE_DIR = ar
+  try {
+    for (let i = 0; i < 4; i++) {
+      await archiveBeforeWrite(d, 'alice', [target], `keep-${i}`)
+      await new Promise((r) => setTimeout(r, 15))
+    }
+    const listDirs = async (p) => { try { return (await readdir(p, { withFileTypes: true })).filter((x) => x.isDirectory()).map((x) => x.name) } catch { return [] } }
+    const local = await listDirs(join(d, 'scopes', 'alice', '_archive'))
+    const hot = await listDirs(join(ar, '_archive', 'alice'))
+    const cold = await listDirs(join(ar, '_archive-archive', 'alice'))
+    assert.equal(local.length, 0, `C 盘不应留备份，实际 ${local.length}`)
+    assert.equal(hot.length, 2, `归档盘应留 2 份，实际 ${hot.length}`)
+    assert.equal(cold.length, 2, `cold 目录应收 2 份，实际 ${cold.length}`)
+  } finally {
+    delete process.env.JIANMU_ARCHIVE_DIR
+  }
 })
 
 await t('rebuild：0 次嵌入，重建 index_meta', async () => {

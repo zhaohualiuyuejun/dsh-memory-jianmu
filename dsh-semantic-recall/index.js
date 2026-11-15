@@ -164,6 +164,8 @@ export const Config = !z ? undefined : z.object({
     .description('claim→chunk 语义桥条数（默认 3；0=关闭。桥负责把深埋证据顶上来）'),
   claimBridgeM: z.number().default(10).extra('volatile', true)
     .description('每条桥 claim 取前 M 个 chunk（默认 10）'),
+  claimVecArchiveDir: z.string().default('').extra('volatile', true)
+    .description('claim 向量旧桶归档目录（建议放别的盘）；留空 = 自动清理冗余旧桶，避免 C 盘无限增长'),
   /** P0（2026-11-12）：交付形态。只影响「给模型看多少」，不改排序、不改索引。 */
   maxHitsPerSession: z.number().default(2).extra('volatile', true)
     .description('每场会话最多交付几条命中（默认 2；旧的 3 可用 3 还原）'),
@@ -208,6 +210,7 @@ const DEFAULTS = {
   claimExpand: 10,
   claimBridgeK: 3,
   claimBridgeM: 10,
+  claimVecArchiveDir: '',
   maxHitsPerSession: 2,
   excerptHead: 500,
   excerptTail: 150,

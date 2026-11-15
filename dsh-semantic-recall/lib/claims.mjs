@@ -134,7 +134,52 @@ export async function ensureClaimVectors({ claims, cacheDir, cfg, embedDocuments
     fs.writeFileSync(binFile, Buffer.from(vec.buffer, vec.byteOffset, vec.byteLength))
     fs.writeFileSync(metaFile, JSON.stringify({ hash, count: claims.length, dim, model, keys, reused: claims.length - miss.length, builtAt: new Date().toISOString() }))
   } catch (e) { console.warn(`[claims] 缓存写入失败（不影响本次）：${e?.message || e}`) }
+  // 写成功后清理「已被新桶完全覆盖」的旧桶：
+  // 缓存桶按 claimId 集合哈希命名，集合一变就写整桶；旧桶不清理会无限膨胀（本机曾 11 桶 574MB）。
+  try {
+    const archiveDir = String(cfg?.claimVecArchiveDir || process.env.JIANMU_ARCHIVE_DIR || '').trim()
+    const pr = pruneRedundantClaimVecs(cacheDir, binFile, keys, { archiveDir })
+    if (pr.moved || pr.deleted) console.log(`[claims] 清理旧向量桶：归档 ${pr.moved} / 删除 ${pr.deleted}`)
+  } catch { /* 清理失败不影响本次召回 */ }
   return { vecs: vec, dim, count: claims.length, cached: false, reused: claims.length - miss.length }
+}
+
+/**
+ * 清理冗余的 claim-vec 桶：只有「全部 key 都能被 keptKeys 覆盖」的桶才算冗余。
+ * 配了归档目录 → 移到归档；否则删除（缓存可由 claims.jsonl 重建）。
+ */
+export function pruneRedundantClaimVecs(cacheDir, keptBinFile, keptKeys, { archiveDir = '' } = {}) {
+  const keptSet = new Set(keptKeys)
+  const keptMeta = `${keptBinFile}.json`
+  const out = { moved: 0, deleted: 0, skipped: 0 }
+  let names = []
+  try { names = fs.readdirSync(cacheDir).filter((f) => f.endsWith('.f32.json')) } catch { return out }
+  for (const fn of names) {
+    const metaPath = path.join(cacheDir, fn)
+    if (metaPath === keptMeta) continue
+    let m
+    try { m = JSON.parse(fs.readFileSync(metaPath, 'utf8')) } catch { continue }
+    if (!Array.isArray(m.keys) || !m.keys.length) continue
+    if (!m.keys.every((k) => keptSet.has(k))) { out.skipped++; continue }
+    const bin = path.join(cacheDir, fn.slice(0, -5))
+    if (!fs.existsSync(bin)) continue
+    try {
+      if (archiveDir) {
+        fs.mkdirSync(archiveDir, { recursive: true })
+        const base = fn.slice(0, -5) // 去掉 .json → 保留 .f32 名
+        fs.copyFileSync(bin, path.join(archiveDir, base))
+        fs.copyFileSync(metaPath, path.join(archiveDir, fn))
+        fs.unlinkSync(bin)
+        fs.unlinkSync(metaPath)
+        out.moved++
+      } else {
+        fs.unlinkSync(bin)
+        fs.unlinkSync(metaPath)
+        out.deleted++
+      }
+    } catch { /* 单个桶失败不阻塞 */ }
+  }
+  return out
 }
 
 function rrf(lists, k = RRF_K) {

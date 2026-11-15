@@ -292,6 +292,28 @@ def build(persona):
         print(f"   b{j:02d} n={len(idx):4d} sub={int(subs[idx].max())+1} | " + "、".join(f"{h}({v})" for h, v in hs.most_common(3)))
     print("  自动名：", " | ".join(f"{j}:{auto[j]}" for j in range(min(k, 28))))
 
+def discover_personas():
+    """默认人格 = <dataRoot>/year/ 下真正有 claims.jsonl 的目录。
+    不再回退到 alice/bob 测试夹具：新用户点「重建星图」时那些文件不存在，会直接崩。"""
+    base = os.path.join(DATA_ROOT, "year")
+    try:
+        names = sorted(os.listdir(base))
+    except OSError:
+        return []
+    return [n for n in names if os.path.isfile(os.path.join(base, n, "claims.jsonl"))]
+
 if __name__ == "__main__":
-    for p in (sys.argv[1:] or ["alice", "bob"]):
+    personas = sys.argv[1:] or discover_personas()
+    if not personas:
+        print(f"[starmap] 没有可构建的人格：{os.path.join(DATA_ROOT, 'year')} 下没有带 claims.jsonl 的目录", file=sys.stderr)
+        sys.exit(1)
+    built = 0
+    for p in personas:
+        file = os.path.join(DATA_ROOT, "year", p, "claims.jsonl")
+        if not os.path.isfile(file):
+            print(f"[starmap] 跳过年轮数据不存在的人格：{p}（缺 {file}）", file=sys.stderr)
+            continue
         build(p)
+        built += 1
+    if built == 0:
+        sys.exit(1)

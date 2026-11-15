@@ -7,7 +7,7 @@
 
 一个 DSH（DeepSeek Harness）插件：只读会话历史、本地建索引、4 个 agent 工具 + **自带设置页**。
 
-> 版本 `0.4.5` · 四个检索增强开关默认关（`hygiene` / `hybrid` / `rerank` / `claims`），
+> 版本 `0.4.6` · 四个检索增强开关默认关（`hygiene` / `hybrid` / `rerank` / `claims`），
 > 在设置页「检索增强」或 `config.json` 开启；**软认领 `softClaim` 默认开**（只在 identity 明确映射工作区时生效）；
 > **`sourcesFromIdentity` 默认关**（开 = 手填源优先 + identity 派生补缺）。
 
@@ -15,7 +15,7 @@
 
 | 包 | 版本 | 与寻枝的关系 |
 |---|---|---|
-| `dsh-semantic-recall`（寻枝） | **0.4.5** | 本包；sources 派生（P4 #11）+ 软认领空 scope 修复 + 设置页版本号 |
+| `dsh-semantic-recall`（寻枝） | **0.4.6** | 本包；claim 向量旧桶自动清理 / 归档（2026-11-15） |
 | `dsh-memory-store`（根藏） | **0.2.4** | 提供 `rootStore` 数据源；identity 受控写（P4 #5） |
 | `dsh-memory-process`（熏习） | **0.2.6** | 提供重复组/状态（`hygiene`）；lifecycle 带软认领口径；UI 版本号跟随包版本 |
 | `dsh-memory-yearring`（年轮） | **0.3.1** | 提供 claim（`claims`）；UI 版本号跟随包版本 |
@@ -234,6 +234,7 @@ session_recall({ session: "session-demo-..." })
 - 标题行右侧有 **「停用嵌入」**（旁边写明：会导致检索能力下降）
 - **索引天数**；**工作区勾选列表**（✅ 索引 / □ 不索引；新出现的工作区默认勾上）
 - 自动增量开关、每日话题卡开关与总结模型（留空 = 用 DSH 当前模型）
+- **claim 向量旧桶**：写入新桶后自动清理「已被完全覆盖」的旧桶；想保留历史就配 `claimVecArchiveDir`（建议别的盘），留空则直接清理，避免 C 盘无限增长（2026-11-15）
 - **旧版人格隔离**（配置项 `allowFromWorkspaces`）：只允许指定工作区里发起的会话调用检索；默认留空=不限制。
   **有源时它会被源取代**（源是精确匹配、更强），只在没有源时才生效。
 - 「增量更新」「全量重建」两个按钮（**全量重建通常需要数分钟，属于正常现象**：要把 2000~3000 块逐条嵌入）

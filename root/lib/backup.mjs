@@ -11,6 +11,7 @@ import { copyFile, mkdir, stat, constants } from 'node:fs/promises'
 import { join, basename } from 'node:path'
 import { hashFile, atomicWrite, pathExists, readJson } from './fsatomic.mjs'
 import { archiveDir } from './paths.mjs'
+import { getArchiveRoot } from './archive.mjs'
 import { pruneArchives } from './retention.mjs'
 
 function stamp(d = new Date()) {
@@ -24,7 +25,11 @@ function stamp(d = new Date()) {
  */
 export async function archiveBeforeWrite(root, personaId, files, reason = 'write') {
   const ts = stamp()
-  const dir = join(archiveDir(root, personaId), `${reason}-${ts}`)
+  // 配了 archiveDir 就写到别的盘（C 盘只留正在用的数据）；没配则留在 scope/_archive
+  const ar = getArchiveRoot()
+  const dir = ar
+    ? join(ar, '_archive', personaId, `${reason}-${ts}`)
+    : join(archiveDir(root, personaId), `${reason}-${ts}`)
   await mkdir(dir, { recursive: true })
   const out = []
   for (const src of files) {
@@ -40,7 +45,7 @@ export async function archiveBeforeWrite(root, personaId, files, reason = 'write
     out.push({ name, bytes: st.size, sha256: await hashFile(dest) })
   }
   const result = { ok: true, dir, files: out, stamp: ts, reason }
-  // Stage 0：只保留最近 2 份；更旧的移到 <dataRoot>/_backup/archive/（不删）
+  // 只保留最近 2 份：配了 archiveDir → 旧份移到归档的 cold 目录；没配 → 清理更旧的（防 C 盘无限增长）
   try {
     result.pruned = await pruneArchives(root, personaId, { keep: 2 })
   } catch (e) {

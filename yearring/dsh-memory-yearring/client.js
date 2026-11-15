@@ -6,7 +6,7 @@ window.__ModuleLoader__.load({
     const API = '/api/year-ring'
     const STARMAP_API = '/api/jianmu-starmap'
     // UI 显示的插件版本：与 package.json 一致（发布检查会强制核对）
-    const PLUGIN_VERSION = '0.4.3'
+    const PLUGIN_VERSION = '0.4.4'
 
     // ── helpers ────────────────────────────────────────────────────────────
     function qs(params) {
@@ -543,6 +543,9 @@ window.__ModuleLoader__.load({
     // 构建失败时把技术日志翻成一句人话（日志尾部仍展示，方便进阶用户）
     function starmapBuildHint(code, tail) {
       const t = String(tail || '')
+      if (/claims\.jsonl|没有可构建的人格|跳过年轮数据不存在/i.test(t)) {
+        return '构建失败：年轮里还没有可构建的人格数据（缺 year/<人格>/claims.jsonl）。先去「年轮」页跑一次，或确认人格 id 正确。'
+      }
       if (/No module named '?numpy|ModuleNotFoundError/i.test(t)) {
         return '构建失败：这个 Python 里没有 numpy。DSH 自带 Python 已包含 numpy —— 把 JIANMU_PYTHON 指向它，或给当前 Python 装上 numpy 再试。'
       }
@@ -597,7 +600,14 @@ window.__ModuleLoader__.load({
       }
       const startBuild = () => {
         setBuild({ busy: true, tone: 'muted', msg: '正在启动构建…', tail: '' })
-        fetch(`${STARMAP_API}/build?confirm=1`, { method: 'POST' })
+        // 显式带上当前已知人格：不让 Python 侧再猜（旧版不传 = 走 alice/bob 测试夹具 → 必崩）
+        const ids = (state.data?.personas || []).map((p) => p.id).filter(Boolean)
+        const payload = ids.length ? JSON.stringify({ confirm: 1, personas: ids }) : ''
+        fetch(`${STARMAP_API}/build?confirm=1`, {
+          method: 'POST',
+          headers: payload ? { 'content-type': 'application/json' } : undefined,
+          body: payload || undefined,
+        })
           .then(async (res) => {
             const body = await res.json().catch(() => null)
             if (!res.ok || !body || body.ok === false) {
@@ -704,13 +714,13 @@ window.__ModuleLoader__.load({
               : null))
       }
       const personas = state.data.personas || []
-      // 默认优先Alice（用户自己的星图），其次列表第一个
-      let pid = personas.some((p) => p.id === 'alice') ? 'alice' : (personas[0]?.id || 'alice')
+      // 默认第一个人格（真实数据）；不再把测试夹具 alice 当默认
+      let pid = personas[0]?.id || ''
       try {
         const saved = localStorage.getItem('jianmu.starmap.personaId')
         if (saved && personas.some((p) => p.id === saved)) pid = saved
       } catch { /* ignore */ }
-      const src = `${STARMAP_API}/ui/index.html?persona=${encodeURIComponent(pid)}`
+      const src = `${STARMAP_API}/ui/index.html${pid ? `?persona=${encodeURIComponent(pid)}` : ''}`
       // 铺满宿主窗口（全屏兜底）：fixed 到视口四边，盖住 DSH 侧栏与内边距
       const wrapStyle = expanded
         ? { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 2147482000, background: '#04070e', borderRadius: 0, height: '100vh' }

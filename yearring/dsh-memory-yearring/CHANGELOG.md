@@ -1,5 +1,18 @@
 # CHANGELOG
 
+## 0.4.4 — 2026-11-15
+
+星图可重建 + 快照不再无限增长：
+- **修复「重建星图」必失败**：`build-starmap.py` / `layout-blades.py` 默认人格不再回退测试夹具 `alice/bob`，
+  改为扫描 `year/*/claims.jsonl`（布局扫 `stats-*.json`）自动发现；面板按钮改为显式传 personas；
+  `starmap-ui/app.js` 去掉 alice 特判；缺 claims 时给中文提示而不是英文栈；
+- 新增设置 `archiveDir`：`rebuildTopicDocs` 成功后 `settleTopicSnapshots()` 只保留最近 2 份时间戳快照；
+  配了归档 → 搬到 `<archiveDir>/year/<pid>/_archive/`；没配 → 清理更旧的；
+  `hard-claim-*` / `lock-stale-*` 不参与清理；
+- 修复 `normalizeConfig` 把字符串 `archiveDir` 当数字丢弃的问题；
+- 本机实收：`year` 1,018MB → 25MB（165 份小时快照搬到 H 盘，未删除）；
+- 背景：`rebuildTopicDocs` 每小时镜像整份 topic_docs，旧快照只建不删。
+
 > **2026-11-15 发布前修正（同版本重打，代码有变）**：星图空态新增「重建星图」按钮（空态即可构建，轮询进度）；失败时把 numpy / 找不到 Python 翻成中文。；文档：去掉指向内部施工计划的悬空提及（公开集不含研发计划）
 
 ## 0.4.3 — 2026-11-14

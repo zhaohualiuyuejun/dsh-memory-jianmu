@@ -47,6 +47,8 @@ export const Config = !z ? undefined : z.object({
     .description('总开关：关掉后工具只回一句「已关闭」'),
   dataRoot: z.string().default('').extra('volatile', true)
     .description('根藏数据根；年轮只读 <dataRoot>/scopes 与 process，只写 <dataRoot>/year/<personaId>'),
+  archiveDir: z.string().default('').extra('volatile', true)
+    .description('归档目录（建议放别的盘）：topic_docs 重建快照移到这里，C 盘只留正在用的；留空 = 只保留最近 2 份并自动清理'),
   writeEnabled: z.boolean().default(true).extra('volatile', true)
     .description('写总闸：关掉后 run/rebuild 拒绝执行（只读查询照常）'),
   llmProvider: z.string().default('deepseek-account').extra('volatile', true)
@@ -88,6 +90,7 @@ export const Config = !z ? undefined : z.object({
 const DEFAULTS = Object.freeze({
   enabled: true,
   dataRoot: '',
+  archiveDir: '',
   writeEnabled: true,
   llmProvider: 'deepseek-account',
   llmModel: 'deepseek-flash',
@@ -124,7 +127,7 @@ function normalizeConfig(cfg) {
       const n = Number(v)
       // autoDigestMinute 允许 -1（= 不用整点对齐，按固定间隔跑）
       if (Number.isFinite(n) && (n >= 0 || (k === 'autoDigestMinute' && n === -1))) out[k] = n
-    } else if (k === 'llmProvider' || k === 'llmModel') {
+    } else if (k === 'llmProvider' || k === 'llmModel' || k === 'archiveDir') {
       const str = pickSettingString(v)
       if (str && str !== '[object Object]') out[k] = str
     } else {
@@ -413,7 +416,7 @@ export function apply(ctx, config) {
       if (off) return off
       const p = await resolvePersona(args, exec)
       if (!p.ok) return p
-      return rebuildTopicDocs({ dataRoot: dataRoot(), personaId: p.personaId, confirm: Boolean(args.confirm) })
+      return rebuildTopicDocs({ dataRoot: dataRoot(), personaId: p.personaId, confirm: Boolean(args.confirm), archiveDir: String(cfg?.archiveDir || '') })
     },
   })
 
@@ -660,7 +663,7 @@ export function apply(ctx, config) {
         if ((r.selection?.remaining ?? 0) <= 0) break
         if (dailyCap > 0 && state.tokens >= dailyCap) { state.stoppedBy = 'DAILY_TOKEN_BUDGET'; break }
       }
-      state.rebuild = await rebuildTopicDocs({ dataRoot: dataRoot(), personaId, confirm: true })
+      state.rebuild = await rebuildTopicDocs({ dataRoot: dataRoot(), personaId, confirm: true, archiveDir: String(cfg?.archiveDir || '') })
     } catch (e) {
       state.error = e?.code || e?.message || String(e)
     } finally {

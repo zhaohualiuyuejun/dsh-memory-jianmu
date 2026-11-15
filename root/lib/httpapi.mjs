@@ -19,7 +19,7 @@ export const API_PREFIX = '/api/memory-store'
 export const WRITE_HEADER = 'x-dsh-jianmu'
 
 /** 允许从 UI 改的字段（其余一律拒绝：拼错就报错，别让它静默不生效） */
-export const SETTINGS_WRITABLE = Object.freeze(['autoIngest', 'embeddingApiBase', 'embeddingApiKey'])
+export const SETTINGS_WRITABLE = Object.freeze(['autoIngest', 'embeddingApiBase', 'embeddingApiKey', 'archiveDir'])
 
 const MAX_BODY_BYTES = 64 * 1024
 const MAX_STRING = 400
@@ -134,6 +134,14 @@ export function validateSettingsPatch(patch) {
       out[key] = s.replace(/\/+$/, '')
       continue
     }
+    if (key === 'archiveDir') {
+      // 归档目录必须是绝对路径（Windows 盘符或 POSIX 根）；留空 = 不归档、只保留最近 N 份
+      if (s && !/^[A-Za-z]:[\\/]/.test(s) && !/^\//.test(s)) {
+        return { ok: false, code: 'BAD_SETTING_VALUE', message: 'archiveDir 必须是绝对路径（如 H:\\deepseek\\jianmu-archive；留空 = 只保留最近 2 份）' }
+      }
+      out[key] = s
+      continue
+    }
     out[key] = s
   }
   return { ok: true, value: out }
@@ -162,6 +170,10 @@ export function publicSettings({ cfg, revision, writable, embed, dataRoot, dataR
       configured: Boolean(embed?.ok),
       source: embed?.source || null,
       note: embed?.ok ? null : '未配置：留空则回退读寻枝的 ~/.dsh/session-recall/config.json',
+    },
+    archiveDir: {
+      value: typeof cfg?.archiveDir === 'string' ? cfg.archiveDir : '',
+      note: '建议放别的盘：备份/回退快照移到这里，C 盘只留正在用的数据；留空 = 只保留最近 2 份并自动清理更旧的',
     },
     writableFields: [...SETTINGS_WRITABLE],
   }

@@ -5,7 +5,7 @@ window.__ModuleLoader__.load({
     const h = React.createElement
     const API = '/api/memory-store'
     // UI 显示的插件版本：与 package.json 一致（发布检查会强制核对）
-    const PLUGIN_VERSION = '0.2.7'
+    const PLUGIN_VERSION = '0.2.8'
 
     // ── helpers ────────────────────────────────────────────────────────────
     function qs(params) {
@@ -188,13 +188,15 @@ window.__ModuleLoader__.load({
           autoIngest: Boolean(s.autoIngest?.value),
           embeddingApiBase: String(s.embeddingApiBase?.value || ''),
           embeddingApiKey: '',
+          archiveDir: String(s.archiveDir?.value || ''),
         })
-      }, [s?.revision, s?.autoIngest?.value, s?.embeddingApiBase?.value, s?.embeddingApiKey?.configured])
+      }, [s?.revision, s?.autoIngest?.value, s?.embeddingApiBase?.value, s?.embeddingApiKey?.configured, s?.archiveDir?.value])
 
       const refresh = () => setRev((v) => v + 1)
       const dirty = Boolean(s && draft) && (
         draft.autoIngest !== Boolean(s.autoIngest?.value)
         || String(draft.embeddingApiBase || '') !== String(s.embeddingApiBase?.value || '')
+        || String(draft.archiveDir || '') !== String(s.archiveDir?.value || '')
         || String(draft.embeddingApiKey || '').length > 0
       )
 
@@ -203,6 +205,7 @@ window.__ModuleLoader__.load({
         const patch = {}
         if (draft.autoIngest !== Boolean(s.autoIngest?.value)) patch.autoIngest = Boolean(draft.autoIngest)
         if (String(draft.embeddingApiBase || '') !== String(s.embeddingApiBase?.value || '')) patch.embeddingApiBase = String(draft.embeddingApiBase || '').trim()
+        if (String(draft.archiveDir || '') !== String(s.archiveDir?.value || '')) patch.archiveDir = String(draft.archiveDir || '').trim()
         if (String(draft.embeddingApiKey || '').length > 0) patch.embeddingApiKey = String(draft.embeddingApiKey).trim()
         if (!Object.keys(patch).length) {
           setMsg({ tone: 'warn', text: '没有改动：改一个字段再保存' })
@@ -218,6 +221,7 @@ window.__ModuleLoader__.load({
             autoIngest: Boolean(r.autoIngest?.value),
             embeddingApiBase: String(r.embeddingApiBase?.value || ''),
             embeddingApiKey: '',
+            archiveDir: String(r.archiveDir?.value || ''),
           })
           refresh()
         } catch (e) {
@@ -424,6 +428,17 @@ window.__ModuleLoader__.load({
                   ? h('button', { className: 'jm-btn jm-btn-sm', disabled: busy === 'clear', onClick: clearKey }, busy === 'clear' ? '清除中…' : '清除')
                   : null),
               h('div', { className: 'jm-field-note' }, '只写不读：读接口只回「配没配」，任何日志都不落明文')),
+
+            h('div', { className: 'jm-field' },
+              h('div', { className: 'jm-field-label' }, '归档目录（备份/回退快照）'),
+              h('input', {
+                className: 'jm-input', type: 'text', spellCheck: false,
+                placeholder: '留空 = 只保留最近 2 份并自动清理；建议填别的盘，如 H:\\deepseek\\jianmu-archive',
+                value: draft?.archiveDir ?? '',
+                disabled: !s?.writable || busy === 'save',
+                onChange: (e) => setDraft((d) => ({ ...d, archiveDir: e.target.value })),
+              }),
+              h('div', { className: 'jm-field-note' }, '填了就把写前快照与旧备份移到该目录：C 盘只留正在用的数据，不会随时间无限增长')),
 
             h('div', { className: 'jm-actions' },
               h('button', { className: 'jm-btn jm-btn-primary', disabled: !s?.writable || busy === 'save' || !dirty, onClick: save },

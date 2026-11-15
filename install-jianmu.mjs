@@ -27,10 +27,10 @@ import { fileURLToPath } from 'node:url'
 // 用 fileURLToPath，避免解压到含中文/空格的目录时 URL 百分号编码导致路径找不到
 const HERE = dirname(fileURLToPath(import.meta.url))
 const PACKS = [
-  { name: 'dsh-semantic-recall', file: 'dsh-semantic-recall-0.4.5.tgz' },
-  { name: 'dsh-memory-store', file: 'dsh-memory-store-0.2.7.tgz' },
+  { name: 'dsh-semantic-recall', file: 'dsh-semantic-recall-0.4.6.tgz' },
+  { name: 'dsh-memory-store', file: 'dsh-memory-store-0.2.8.tgz' },
   { name: 'dsh-memory-process', file: 'dsh-memory-process-0.2.7.tgz' },
-  { name: 'dsh-memory-yearring', file: 'dsh-memory-yearring-0.4.3.tgz' },
+  { name: 'dsh-memory-yearring', file: 'dsh-memory-yearring-0.4.4.tgz' },
   { name: 'dsh-memory-persona', file: 'dsh-memory-persona-0.3.8.tgz' },
 ]
 const META = { name: 'jianmu-all', file: 'meta/jianmu-all-0.1.0.tgz' }

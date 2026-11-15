@@ -30,6 +30,7 @@ import {
 } from './paths.mjs'
 import { readJson } from './fsatomic.mjs'
 import { loadEmbeddingConfig } from './auto-ingest.mjs'
+import { getArchiveRoot } from './archive.mjs'
 
 export const LOCK_STALE_MS = 30 * 60 * 1000
 export const DEFAULT_SUMMARY_MODEL = 'qwen3:8b'
@@ -183,6 +184,8 @@ function spawnWorker({ dataRoot, personaId, cfg, manifest, embedding, lockFile, 
     SILICONFLOW_API_KEY: embedding.apiKey,
     JIANMU_AUTO_SUMMARY_LOCK: lockFile,
     JIANMU_AUTO_SUMMARY_TOKEN: token,
+    // 配了归档目录 → 写前快照直接落到别的盘（C 盘只留正在用的向量）
+    JIANMU_ARCHIVE_DIR: getArchiveRoot(),
   }
   try {
     const child = spawn(process.execPath, args, {
