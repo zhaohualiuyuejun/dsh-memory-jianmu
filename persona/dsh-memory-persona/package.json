@@ -1,0 +1,62 @@
+{
+  "name": "dsh-memory-persona",
+  "version": "0.3.7",
+  "private": false,
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json",
+    "./client": "./client.js",
+    "./icon": "./icon.svg",
+    "./lib/*": "./lib/*"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "lib",
+    "tools",
+    "cordis.patch.yml",
+    "README.md",
+    "CHANGELOG.md",
+    "CONTRACT-v1.md",
+    "VERSION",
+    "icon.svg"
+  ],
+  "description": "镜台（建木·人格层）：人格卡的唯一写者；版本链/回滚/AI 生成草稿/只读注入预览；v1a 不接管注入",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "memory",
+    "persona",
+    "persona-card",
+    "jianmu"
+  ],
+  "license": "MIT",
+  "author": "zhaohualiuyuejun",
+  "icon": "icon.svg",
+  "engines": {
+    "node": ">=22",
+    "dsh": ">=0.2.1-rc.5 || >=0.2.2-rc.1"
+  },
+  "scripts": {
+    "selftest": "node tools/selftest.mjs",
+    "acceptance": "node tools/acceptance.mjs",
+    "status": "node tools/cli.mjs status"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-sidebar"
+      ]
+    }
+  }
+}

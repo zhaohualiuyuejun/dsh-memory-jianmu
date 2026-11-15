@@ -1,0 +1,17 @@
+# dsh-memory-store —— 根藏（建木 · 存储层）
+# 装上之后，profile 的 dsh.profile.bundles 里列出本包名即生效。
+# 默认不启动「工具式」会话增量摄取（ingestEnabled=false）；
+# 插件内自动摄取是独立开关（autoIngest=true），带向量，不弹控制台窗口。
+- insert:
+    - id: memory-store
+      name: dsh-memory-store
+      config:
+        enabled: true
+        ingestEnabled: false
+        retentionDays: 30
+        maxBatchSize: 64
+        # 插件内定时摄取：启动后补跑一次，之后每小时第 7 分钟增量摄取（带向量）
+        # 取代旧的 Windows 计划任务 JianmuRootIngest（不再弹控制台黑框）
+        autoIngest: true
+        autoIngestIntervalMinutes: 60
+        autoIngestMinute: 7

@@ -1,0 +1,16 @@
+# dsh-memory-process —— 熏习（建木 · 处理层）
+# 装上之后，profile 的 dsh.profile.bundles 里列出本包名即生效。
+# 默认零 LLM；只读根藏，只写 <dataRoot>/process/<personaId>/。
+# 插件内自动跟随（默认每小时 :17，根藏 :07 摄取之后），不再依赖系统计划任务。
+- insert:
+    - id: memory-process
+      name: dsh-memory-process
+      config:
+        enabled: true
+        processEnabled: true
+        autoMirrorRetention: true
+        llmEnabled: false
+        maxChunksPerRun: 20000
+        autoRun: true
+        autoRunIntervalMinutes: 60
+        autoRunMinute: 17

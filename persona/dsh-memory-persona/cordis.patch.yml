@@ -1,0 +1,22 @@
+# dsh-memory-persona —— 镜台（建木 · 人格层）
+# 装上之后，profile 的 dsh.profile.bundles 里列出本包名即生效。
+# 只写 <dataRoot>/persona/；v1a 不接管注入、不写 soul-md。
+# v2：注入接管默认关闭；本机由 profile 覆盖或本处 injectEnabled 打开。
+- insert:
+    - id: memory-persona
+      name: dsh-memory-persona
+      config:
+        enabled: true
+        profile: desktop
+        expandEnabled: true
+        expandProvider: ''
+        expandModel: ''
+        expandMaxInputChars: 8000
+        expandMaxOutputTokens: 8000
+        expandTimeoutMs: 60000
+        expandRetries: 1
+        injectEnabled: false
+        injectMaxChars: 12000
+        injectPersonaOrder: 0
+        injectMemoryOrder: 0.5
+        injectCacheMs: 5000

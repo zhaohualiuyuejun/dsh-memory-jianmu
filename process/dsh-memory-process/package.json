@@ -1,0 +1,71 @@
+{
+  "name": "dsh-memory-process",
+  "version": "0.2.7",
+  "private": false,
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json",
+    "./client": "./client.js",
+    "./icon": "./icon.svg",
+    "./lib/*": "./lib/*"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "lib",
+    "tools",
+    "cordis.patch.yml",
+    "README.md",
+    "CONTRACT-v1.md",
+    "VERSION",
+    "icon.svg",
+    "CHANGELOG.md"
+  ],
+  "description": "熏习（建木·处理层）：把根藏原话整理成可管理、可追溯的状态与归属；不改原文、不写 topic 正文、不注入、不检索，默认零 LLM",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "memory",
+    "process",
+    "dedupe",
+    "state",
+    "jianmu"
+  ],
+  "license": "MIT",
+  "author": "zhaohualiuyuejun",
+  "icon": "icon.svg",
+  "engines": {
+    "node": ">=22",
+    "dsh": ">=0.2.1-rc.5 || >=0.2.2-rc.1"
+  },
+  "scripts": {
+    "selftest": "node tools/selftest.mjs",
+    "acceptance": "node tools/acceptance.mjs",
+    "status": "node tools/cli.mjs status",
+    "checkStore": "node tools/check-external-store.mjs",
+    "smoke:external": "node tools/external-store-smoke.mjs"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-sidebar"
+      ]
+    }
+  },
+  "dependencies": {
+    "dsh-jianmu-utterance-core": "0.1.0"
+  },
+  "bundledDependencies": [
+    "dsh-jianmu-utterance-core"
+  ]
+}

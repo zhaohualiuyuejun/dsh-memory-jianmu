@@ -1,0 +1,66 @@
+{
+  "name": "dsh-memory-store",
+  "version": "0.2.7",
+  "private": false,
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./package.json": "./package.json",
+    "./client": "./client.js",
+    "./lib/*": "./lib/*"
+  },
+  "description": "根藏（建木·存储层）：把「谁、在什么时候、说了什么」原话摄取、落盘、可重建；不检索、不注入",
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "memory",
+    "storage",
+    "utterance",
+    "evidence",
+    "jianmu"
+  ],
+  "license": "MIT",
+  "author": "zhaohualiuyuejun",
+  "engines": {
+    "node": ">=22",
+    "dsh": ">=0.2.1-rc.5 || >=0.2.2-rc.1"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "lib",
+    "tools",
+    "cordis.patch.yml",
+    "README.md",
+    "CONTRACT-v1.md",
+    "VERSION",
+    "CHANGELOG.md"
+  ],
+  "scripts": {
+    "selftest": "node tools/selftest.mjs",
+    "verify": "node tools/verify-morning.mjs",
+    "status": "node tools/cli.mjs status"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-sidebar"
+      ]
+    }
+  },
+  "dependencies": {
+    "dsh-jianmu-utterance-core": "0.1.0"
+  },
+  "bundledDependencies": [
+    "dsh-jianmu-utterance-core"
+  ]
+}

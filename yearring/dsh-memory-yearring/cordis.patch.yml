@@ -1,0 +1,26 @@
+# dsh-memory-yearring —— 年轮（建木 · 认知层）
+# 装上之后，profile 的 dsh.profile.bundles 里列出本包名即生效。
+# 默认自动消化（插件内定时，不需要任务看板/系统计划任务）；只读 scopes/ + process/，
+# 只写 <dataRoot>/year/<personaId>/。每天有 token 安全阀，用满当天暂停自动、手动 run 不受影响。
+- insert:
+    - id: memory-yearring
+      name: dsh-memory-yearring
+      config:
+        enabled: true
+        writeEnabled: true
+        llmProvider: deepseek-account
+        llmModel: deepseek-flash
+        maxInputChars: 24000
+        maxOutputTokens: 8000
+        timeoutMs: 90000
+        maxClaimsPerRun: 80
+        maxChunksPerRun: 24
+        # ── 自动消化 ─────────────────────────────────────────────
+        autoDigest: true
+        autoDigestIntervalMinutes: 60
+        autoDigestMinute: 27
+        autoDigestScope: last:90d
+        autoDigestBatchChunks: 12
+        autoDigestMaxRounds: 8
+        autoDigestBudgetTokens: 8000
+        autoDigestDailyTokenBudget: 1200000
